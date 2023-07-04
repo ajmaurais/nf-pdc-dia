@@ -8,9 +8,12 @@ include { skyline_import } from "./nf-submodules/workflows/skyline_import.nf"
 include { get_input_files } from "./nf-submodules/workflows/get_input_files.nf"
 include { encyclopedia_search } from "./nf-submodules/workflows/encyclopedia_search.nf"
 include { get_mzml_files } from "./nf-submodules/workflows/get_ms_data_files.nf"
+include { generate_dia_qc_report } from "./nf-submodules/workflows/generate_qc_report.nf"
 
 // modules
-include {SKYLINE_ANNOTATE_DOCUMENT} from "./nf-submodules/modules/skyline.nf"
+include { SKYLINE_ANNOTATE_DOCUMENT } from "./nf-submodules/modules/skyline.nf"
+include { PANORAMA_IMPORT_SKYLINE } from "./nf-submodules/modules/panorama.nf"
+include { PANORAMA_UPLOAD_FILE as UPLOAD_QC_REPORTS } from "../nf-submodules/modules/panorama.nf"
 
 workflow {
 
@@ -19,11 +22,14 @@ workflow {
         get_pdc_files()
         wide_mzml_ch = get_pdc_files.out.wide_mzml_ch
         annotations_csv = get_pdc_files.out.annotations_csv
+        metadata = get_pdc_files.out.metadata
     } else {
         get_pdc_study_metadata()
         get_mzml_files(params.ms_data_dir, '*', 'raw')
         wide_mzml_ch = get_mzml_files.out.mzml_ch
         annotations_csv = get_pdc_study_metadata.out.annotations_csv
+        metadata = get_pdc_study_metadata.out.metadata
+        
     }
 
     // get fasta, spectral library, and Skyline template.
@@ -58,9 +64,13 @@ workflow {
     SKYLINE_ANNOTATE_DOCUMENT(skyline_import.out.skyline_results, annotations_csv)
 
     // Import Skyline document to Panorama
+    // PANORAMA_IMPORT_SKYLINE(params.panorama_skyline_folder, SKYLINE_ANNOTATE_DOCUMENT.out.final_skyline_zipfile)
 
-    // Export reports
+    // Export other reports
 
     // Generate and upload QC report
+    generate_dia_qc_report(SKYLINE_ANNOTATE_DOCUMENT.out.final_skyline_zipfile,
+                           "${params.pdc_study_id} DIA QC report")
+    UPLOAD_QC_REPORTS(params.panorama_skyline_folder, generate_dia_qc_report.qc_reports)
 }
 
