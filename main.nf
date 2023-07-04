@@ -13,7 +13,7 @@ include { generate_dia_qc_report } from "./nf-submodules/workflows/generate_qc_r
 // modules
 include { SKYLINE_ANNOTATE_DOCUMENT } from "./nf-submodules/modules/skyline.nf"
 include { PANORAMA_IMPORT_SKYLINE } from "./nf-submodules/modules/panorama.nf"
-include { PANORAMA_UPLOAD_FILE as UPLOAD_QC_REPORTS } from "../nf-submodules/modules/panorama.nf"
+include { PANORAMA_UPLOAD_FILE as UPLOAD_QC_REPORTS } from "./nf-submodules/modules/panorama.nf"
 
 workflow {
 
@@ -64,13 +64,13 @@ workflow {
     SKYLINE_ANNOTATE_DOCUMENT(skyline_import.out.skyline_results, annotations_csv)
 
     // Import Skyline document to Panorama
-    // PANORAMA_IMPORT_SKYLINE(params.panorama_skyline_folder, SKYLINE_ANNOTATE_DOCUMENT.out.final_skyline_zipfile)
+    PANORAMA_IMPORT_SKYLINE(params.panorama_skyline_folder, SKYLINE_ANNOTATE_DOCUMENT.out.final_skyline_zipfile)
 
     // Export other reports
 
     // Generate and upload QC report
     generate_dia_qc_report(SKYLINE_ANNOTATE_DOCUMENT.out.final_skyline_zipfile,
                            "${params.pdc_study_id} DIA QC report")
-    UPLOAD_QC_REPORTS(params.panorama_skyline_folder, generate_dia_qc_report.qc_reports)
+    UPLOAD_QC_REPORTS(params.panorama_skyline_folder, generate_dia_qc_report.out.qc_reports)
 }
 
