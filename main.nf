@@ -67,8 +67,7 @@ workflow {
     // Annotate Skyline document
     UNZIP_SKY_FILE(skyline_import.out.skyline_results)
     SKYLINE_ANNOTATE_DOCUMENT(UNZIP_SKY_FILE.out.sky_file,
-                              UNZIP_SKY_FILE.out.skyd_file,
-                              UNZIP_SKY_FILE.out.lib_file,
+                              UNZIP_SKY_FILE.out.sky_artifacts.collect(),
                               annotations_csv)
 
     // Import Skyline document to Panorama
@@ -82,8 +81,7 @@ workflow {
 
     // Generate and upload QC report
     generate_dia_qc_report(UNZIP_SKY_FILE.out.sky_file,
-                           UNZIP_SKY_FILE.out.skyd_file,
-                           UNZIP_SKY_FILE.out.lib_file,
+                           UNZIP_SKY_FILE.out.sky_artifacts.collect(),
                            "${params.pdc_study_id}",
                            "${params.pdc_study_id} DIA QC report",
                            annotations_csv)
