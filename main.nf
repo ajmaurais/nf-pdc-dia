@@ -17,6 +17,7 @@ include { UNZIP_SKY_FILE } from "./nf-submodules/modules/skyline.nf"
 include { SKYLINE_ANNOTATE_DOCUMENT } from "./nf-submodules/modules/skyline.nf"
 include { PANORAMA_IMPORT_SKYLINE } from "./nf-submodules/modules/panorama.nf"
 include { PANORAMA_UPLOAD_FILE as UPLOAD_QC_REPORTS } from "./nf-submodules/modules/panorama.nf"
+include { EXPORT_GENE_REPORTS } from "./nf-submodules/modules/qc_report.nf"
 
 workflow {
 
@@ -76,15 +77,16 @@ workflow {
                                 SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file)
     }
 
-    // Export other reports
-
-
     // Generate and upload QC report
     generate_dia_qc_report(UNZIP_SKY_FILE.out.sky_file,
                            UNZIP_SKY_FILE.out.sky_artifacts.collect(),
                            "${params.pdc_study_id}",
                            "${params.pdc_study_id} DIA QC report",
                            annotations_csv)
+
+    // Export other reports
+    EXPORT_GENE_REPORTS(generate_dia_qc_report.out.qc_report_db)
+    EXPORT_GENE_REPORTS.out.gene_reports | flatten | set{ gene_reports }
 
     if( params.panorama.reports_folder != null ) {
         UPLOAD_QC_REPORTS(params.panorama.reports_folder
@@ -107,7 +109,8 @@ workflow {
             encyclopedia_search.out.elib,
             SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,
             qc_reports,
-            export_version_info.out.version_info
+            export_version_info.out.version_info,
+            gene_reports
         )
     }
 }
