@@ -96,19 +96,19 @@ workflow {
         generate_dia_qc_report.out.qc_report_db
     )
 
+    // export version information
+    export_version_info(fasta, spectral_library, wide_mzml_ch)
+
     // upload results to s3
     if( params.s3_upload.bucket_name != null ) {
         s3_upload(
             wide_mzml_ch,
             encyclopedia_search.out.search_files,
             encyclopedia_search.out.elib,
-            skyline_import.out.skyd_files,
             SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,
-            qc_reports
+            qc_reports,
+            export_version_info.out.version_info
         )
     }
-
-    // export version information
-    export_version_info(fasta, spectral_library, wide_mzml_ch)
 }
 
