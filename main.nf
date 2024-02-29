@@ -11,6 +11,7 @@ include { get_mzml_files } from "./nf-submodules/workflows/get_ms_data_files.nf"
 include { generate_dia_qc_report } from "./nf-submodules/workflows/generate_qc_report.nf"
 include { s3_upload } from "./workflows/s3_transfer.nf"
 include { export_version_info } from './workflows/export_version_info.nf'
+include { combine_file_stats } from './workflows/combine_file_stats.nf'
 
 // modules
 include { UNZIP_SKY_FILE } from "./nf-submodules/modules/skyline.nf"
@@ -101,19 +102,29 @@ workflow {
     // export version information
     export_version_info(fasta, spectral_library, wide_mzml_ch)
 
+    combine_file_stats(
+        encyclopedia_search.out.search_files,
+        encyclopedia_search.out.search_file_hashes,
+        encyclopedia_search.out.elib,
+        encyclopedia_search.out.elib_hash,
+        SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,
+        SKYLINE_ANNOTATE_DOCUMENT.out.file_hash,
+        qc_reports,
+        export_version_info.out.version_info,
+        gene_reports
+    )
+
     // upload results to s3
     if( params.s3_upload.bucket_name != null ) {
         s3_upload(
             wide_mzml_ch,
             encyclopedia_search.out.search_files,
-            encyclopedia_search.out.search_file_hashes,
             encyclopedia_search.out.elib,
-            encyclopedia_search.out.elib_hash,
             SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,
-            SKYLINE_ANNOTATE_DOCUMENT.out.file_hash,
             qc_reports,
             export_version_info.out.version_info,
-            gene_reports
+            gene_reports,
+            combine_file_stats.out.file_hashes
         )
     }
 }
