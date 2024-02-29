@@ -9,7 +9,7 @@ include { get_input_files } from "./nf-submodules/workflows/get_input_files.nf"
 include { encyclopedia_search } from "./nf-submodules/workflows/encyclopedia_search.nf"
 include { get_mzml_files } from "./nf-submodules/workflows/get_ms_data_files.nf"
 include { generate_dia_qc_report } from "./nf-submodules/workflows/generate_qc_report.nf"
-include { s3_upload } from "./nf-submodules/workflows/s3_transfer.nf"
+include { s3_upload } from "./workflows/s3_transfer.nf"
 include { export_version_info } from './workflows/export_version_info.nf'
 
 // modules
