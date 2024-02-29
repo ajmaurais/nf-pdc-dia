@@ -106,8 +106,11 @@ workflow {
         s3_upload(
             wide_mzml_ch,
             encyclopedia_search.out.search_files,
+            encyclopedia_search.out.search_file_hashes,
             encyclopedia_search.out.elib,
+            encyclopedia_search.out.elib_hash,
             SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,
+            SKYLINE_ANNOTATE_DOCUMENT.out.file_hash,
             qc_reports,
             export_version_info.out.version_info,
             gene_reports
