@@ -14,10 +14,11 @@ include { export_version_info } from './workflows/export_version_info.nf'
 include { combine_file_stats } from './workflows/combine_file_stats.nf'
 
 // modules
+include { SKYLINE_MINIMIZE_DOCUMENT } from "./nf-submodules/modules/skyline.nf"
 include { UNZIP_SKY_FILE } from "./nf-submodules/modules/skyline.nf"
 include { SKYLINE_ANNOTATE_DOCUMENT } from "./nf-submodules/modules/skyline.nf"
 include { PANORAMA_IMPORT_SKYLINE } from "./nf-submodules/modules/panorama.nf"
-include { PANORAMA_UPLOAD_FILE as UPLOAD_QC_REPORTS } from "./nf-submodules/modules/panorama.nf"
+include { PANORAMA_UPLOAD_FILE as PANORAMA_UPLOAD_QC_REPORTS } from "./nf-submodules/modules/panorama.nf"
 include { EXPORT_GENE_REPORTS } from "./nf-submodules/modules/qc_report.nf"
 
 workflow {
@@ -28,12 +29,14 @@ workflow {
         wide_mzml_ch = get_pdc_files.out.wide_mzml_ch
         annotations_csv = get_pdc_files.out.annotations_csv
         metadata = get_pdc_files.out.metadata
+        study_name = get_pdc_files.out.study_name
     } else {
         get_pdc_study_metadata()
         get_mzml_files(params.ms_data_dir, '*', 'raw')
         wide_mzml_ch = get_mzml_files.out.mzml_ch
         annotations_csv = get_pdc_study_metadata.out.annotations_csv
         metadata = get_pdc_study_metadata.out.metadata
+        study_name = get_pdc_study_metadata.out.study_name
     }
 
     // get fasta, spectral library, and Skyline template.
@@ -67,10 +70,12 @@ workflow {
     )
 
     // Annotate Skyline document
-    UNZIP_SKY_FILE(skyline_import.out.skyline_results)
+    SKYLINE_MINIMIZE_DOCUMENT(skyline_import.out.skyline_results)
+    UNZIP_SKY_FILE(SKYLINE_MINIMIZE_DOCUMENT.out.final_skyline_zipfile)
     SKYLINE_ANNOTATE_DOCUMENT(UNZIP_SKY_FILE.out.sky_file,
                               UNZIP_SKY_FILE.out.sky_artifacts.collect(),
-                              annotations_csv)
+                              annotations_csv,
+                              study_name)
 
     // Import Skyline document to Panorama
     if( params.panorama.skyline_folder != null ) {
@@ -81,16 +86,16 @@ workflow {
     // Generate and upload QC report
     generate_dia_qc_report(UNZIP_SKY_FILE.out.sky_file,
                            UNZIP_SKY_FILE.out.sky_artifacts.collect(),
-                           "${params.pdc_study_id}",
-                           "${params.pdc_study_id} DIA QC report",
+                           study_name,
+                           study_name.map{it -> "$it QC report"},
                            annotations_csv)
 
     // Export other reports
-    EXPORT_GENE_REPORTS(generate_dia_qc_report.out.qc_report_db)
+    EXPORT_GENE_REPORTS(generate_dia_qc_report.out.qc_report_db, study_name)
     EXPORT_GENE_REPORTS.out.gene_reports | flatten | set{ gene_reports }
 
     if( params.panorama.reports_folder != null ) {
-        UPLOAD_QC_REPORTS(params.panorama.reports_folder
+        PANORAMA_UPLOAD_QC_REPORTS(params.panorama.reports_folder
                           generate_dia_qc_report.out.qc_reports)
     }
 
@@ -103,6 +108,9 @@ workflow {
     export_version_info(fasta, spectral_library, wide_mzml_ch)
 
     combine_file_stats(
+        fasta,
+        spectral_library,
+        wide_mzml_ch,
         encyclopedia_search.out.search_files,
         encyclopedia_search.out.search_file_hashes,
         encyclopedia_search.out.elib,
@@ -117,7 +125,9 @@ workflow {
     // upload results to s3
     if( params.s3_upload.bucket_name != null ) {
         s3_upload(
-            wide_mzml_ch,
+            fasta,
+            spectral_library,
+            combine_file_stats.out.gziped_mzml_files,
             encyclopedia_search.out.search_files,
             encyclopedia_search.out.elib,
             SKYLINE_ANNOTATE_DOCUMENT.out.sky_zip_file,

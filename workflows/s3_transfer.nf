@@ -7,10 +7,16 @@ include { UPLOAD_FILE as UPLOAD_FINAL_SKYLINE_FILE } from "../nf-submodules/modu
 include { UPLOAD_FILE as UPLOAD_QC_REPORTS } from "../nf-submodules/modules/s3"
 include { UPLOAD_FILE as UPLOAD_FILE_CHECKSUMS } from "../nf-submodules/modules/s3"
 include { UPLOAD_FILE as UPLOAD_GENE_REPORTS } from "../nf-submodules/modules/s3"
+include { UPLOAD_FILE as UPLOAD_FASTA } from "../nf-submodules/modules/s3"
+include { UPLOAD_FILE as UPLOAD_SPECLIB } from "../nf-submodules/modules/s3"
 
 workflow s3_upload {
 
     take:
+        // search files
+        fasta
+        spectral_lib
+        
         mzml_files
 
         // ENCYCLOPEDIA_SEARCH_FILE artifacts
@@ -35,7 +41,13 @@ workflow s3_upload {
 
     main:
 
-        s3_directory = "/${params.s3_upload.prefix_dir == null ? '' : params.s3_upload.prefix_dir + '/'}${params.pdc_study_id}"
+        s3_directory = "/${params.s3_upload.prefix_dir == null ? '' : params.s3_upload.prefix_dir + '/'}${params.pdc.study_id}"
+
+        UPLOAD_FASTA(params.s3_upload.bucket_name, params.s3_upload.access_key,
+                     "${s3_directory}/search_files/", fasta)
+
+        UPLOAD_SPECLIB(params.s3_upload.bucket_name, params.s3_upload.access_key,
+                     "${s3_directory}/search_files/", spectral_lib)
 
         mzml_file_groups = mzml_files.collate(20)
         UPLOAD_MZML_FILES(params.s3_upload.bucket_name, params.s3_upload.access_key,
@@ -54,9 +66,9 @@ workflow s3_upload {
         UPLOAD_QC_REPORTS(params.s3_upload.bucket_name, params.s3_upload.access_key,
                           "${s3_directory}/qc_reports", qc_reports)
 
-        UPLOAD_QC_REPORTS(params.s3_upload.bucket_name, params.s3_upload.access_key,
-                          "${s3_directory}/gene_reports", gene_reports)
+        UPLOAD_GENE_REPORTS(params.s3_upload.bucket_name, params.s3_upload.access_key,
+                            "${s3_directory}/gene_reports", gene_reports)
 
         UPLOAD_FILE_CHECKSUMS(params.s3_upload.bucket_name, params.s3_upload.access_key,
-                              "${s3_directory}", WRITE_FILE_STATS.out)
+                              "${s3_directory}", file_hashes)
 }
